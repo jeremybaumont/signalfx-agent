@@ -98,7 +98,7 @@ def get_types(data):
     return types
 
 def get_node_details_tests(nodeid):
-    tmppkg = nodeid.parent.name.split("/tests/")
+    tmppkg = nodeid.parent.name.split("tests/")
     index = 1 if len(tmppkg) > 1 else 0
     package = tmppkg[index].split('/')[0]
     modulename = nodeid.module.__name__
