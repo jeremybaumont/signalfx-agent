@@ -31,11 +31,12 @@ REPORT_DATA = {
         'headers' : [ 'Basic', 'ConfigSources', 'Packaging' ],
         'msg' : LS + "Miscellaneous testcases available:" + LS,
         'report' : [],
-    }
+    },
 }
-
+substitutes = { '_' : '-', '-collectd' : '',  'collectd-' : '', 'prometheus' : 'prometheus-exporter' }
 re_node_name = re.compile(r'^%s(.*)' % 'test_')
 re_module_name = re.compile(r'(.*)%s$' % '_test')
+re_tests_sub = re.compile('|'.join(map(re.escape, substitutes.keys())))
 
 class MyPlugin:
     def __init__(self):
@@ -169,7 +170,7 @@ def generate_report(types, tests):
     diff_mon = list(
         set([x.replace('_', '-') for x in types['monitors']])
          - 
-        set([x.replace('_', '-').replace('-collectd', '').replace('collectd-', '') for x in tests['monitors'].keys()])
+        set([re_tests_sub.sub(lambda m: substitutes[m.group(0)], x) for x in tests['monitors'].keys()])
         )
     diff_obs = list(set(types['observers']) - set(tests['observers'].keys()))
     for type in FEATURES:
