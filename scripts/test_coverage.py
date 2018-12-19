@@ -10,6 +10,7 @@ import sys
 from tabulate import tabulate
 import time
 
+DEBUG=False
 DESCRIPTION = "signalfx-agent test coverage reporter"
 FEATURES = [ 'monitors', 'observers' ]
 FEATURETYPES = [ 'monitorType', 'observerType' ]
@@ -67,10 +68,11 @@ class ParseArgs:
         parser.add_argument('-t', '--tests-dir', help='signalfx-agent pytest testcases directory',
                             type=self.valid_dir, required=True)
         parser.add_argument('-d', '--debug', help='Debug mode',
-                            type=bool, required=False, default=False)
+                            type=bool, required=False, default=DEBUG)
         return parser.parse_args()
 
 def read_validate_json(file):
+    print("Processing self describe data")
     with open(file) as f:
         data = json.load(f)
     if type(data) == dict:
@@ -95,6 +97,9 @@ def get_types(data):
         ] 
         for type in FEATURES
     }
+    if DEBUG:
+        print("Types:")
+        pprint.pprint(types)
     return types
 
 def get_node_details_tests(nodeid):
@@ -121,6 +126,7 @@ def get_node_details(nodeid):
     return (package, module, name)
 
 def fetch_process_pytests(tests_dir):
+    print("Collecting and procesing pytests data")
     my_plugin = MyPlugin()
     pytest.main(['--collect-only', '-p', 'no:terminal', tests_dir], plugins=[my_plugin])
     testsdata = dict()
@@ -146,6 +152,9 @@ def fetch_process_pytests(tests_dir):
     if not status:
         print("Invalid tests location input is observed, exiting.")
         sys.exit()
+    if DEBUG:
+        print("Tests:")
+        pprint.pprint(testsdata)
     return testsdata
 
 def print_report():
@@ -177,24 +186,18 @@ def generate_report(types, tests):
     print_report()
 
 def main():
+    global DEBUG
     start = time.time()
     args_cls = ParseArgs()
     args = args_cls.parse_args()
     json_file = args.file
     tests_dir = args.tests_dir
-    debug = args.debug
+    DEBUG = args.debug
 
-    print("Processing self describe data")
     data = read_validate_json(json_file)
     types = get_types(data)
-    print("Collecting and procesing pytests data")
     tests = fetch_process_pytests(tests_dir)
     generate_report(types, tests)
-    if debug:
-        print("Types:")
-        pprint.pprint(types)
-        print("Tests:")
-        pprint.pprint(tests)
     print('Total time taken: %f minutes' % ((time.time()-start)/60))
 
 if __name__ == '__main__':
