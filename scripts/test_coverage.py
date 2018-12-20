@@ -137,7 +137,6 @@ def fetch_process_pytests(tests_dir):
             testsdata[package] = dict()
         if not module in testsdata[package]:
             testsdata[package][module] = dict()
-            testsdata[package][module]["general"] = list()
         if '[' in name:
             key, value = name.split('[')
             if key in testsdata[package][module]:
@@ -145,7 +144,7 @@ def fetch_process_pytests(tests_dir):
             else:
                 testsdata[package][module][key] = [ value.strip(']') ]
         else:
-            testsdata[package][module]["general"].append(name)
+            testsdata[package][module][name] = list()
     status = reduce(
         (lambda x, y: x * y), 
         [ True if key in testsdata.keys() else False for key in FEATURES + MISC_FEATURES ]
