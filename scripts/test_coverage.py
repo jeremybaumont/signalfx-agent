@@ -16,6 +16,7 @@ FEATURES = [ 'monitors', 'observers' ]
 FEATURETYPES = [ 'monitorType', 'observerType' ]
 LS = "\n"
 MISC_FEATURES = ['basic', 'config_sources', 'packaging']
+PACKAGES = [ 'basic', 'config_sources', 'monitors', 'observers', 'packaging' ]
 REPORT_DATA = {
     'coverage' : {
         'headers' : [ 'Feature', 'Percentage (%)' ],
@@ -32,6 +33,12 @@ REPORT_DATA = {
         'msg' : LS + "Miscellaneous testcases available:" + LS,
         'report' : [],
     },
+    'functions' : {
+        'headers' : [ 'Package', 'Test', 'Funtions', 'Markers' ],
+        'msg' : LS + 'Available funtions in packages {}:' + LS,
+        'report' : [],
+        'tablefmt' : 'psql'
+    }
 }
 substitutes = { '_' : '-', '-collectd' : '',  'collectd-' : '', 'prometheus' : 'prometheus-exporter' }
 re_node_name = re.compile(r'^%s(.*)' % 'test_')
@@ -68,12 +75,15 @@ class ParseArgs:
                             type=self.valid_file, required=True)
         parser.add_argument('-t', '--tests-dir', help='signalfx-agent pytest testcases directory',
                             type=self.valid_dir, required=True)
+        parser.add_argument('-p', '--packages', 
+                            help='Option to list funtions across listed packages here, such as {}'.format(PACKAGES),
+                            type=str, required=False, default='basic')
         parser.add_argument('-d', '--debug', help='Debug mode',
                             type=bool, required=False, default=DEBUG)
         return parser.parse_args()
 
 def read_validate_json(file):
-    print("Processing self describe data")
+    print("INFO Processing self describe data")
     with open(file) as f:
         data = json.load(f)
     if type(data) == dict:
@@ -86,7 +96,7 @@ def read_validate_json(file):
     else:
         data = False
     if not data:
-        print("Invalid file input, exiting.")
+        print("ERROR Invalid file input, exiting.")
         sys.exit()
     return data
 
@@ -99,7 +109,7 @@ def get_types(data):
         for type in FEATURES
     }
     if DEBUG:
-        print("Types:")
+        print("DEBUG Types:")
         pprint.pprint(types)
     return types
 
@@ -127,7 +137,7 @@ def get_node_details(nodeid):
     return (package, module, name)
 
 def fetch_process_pytests(tests_dir):
-    print("Collecting and procesing pytests data")
+    print("INFO Collecting and procesing pytests data")
     my_plugin = MyPlugin()
     pytest.main(['--collect-only', '-p', 'no:terminal', tests_dir], plugins=[my_plugin])
     testsdata = dict()
@@ -150,21 +160,25 @@ def fetch_process_pytests(tests_dir):
         [ True if key in testsdata.keys() else False for key in FEATURES + MISC_FEATURES ]
     )
     if not status:
-        print("Invalid tests location input is observed, exiting.")
+        print("ERROR Invalid tests location input is observed, exiting.")
         sys.exit()
     if DEBUG:
-        print("Tests:")
+        print("DEBUG Tests:")
         pprint.pprint(testsdata)
     return testsdata
 
-def print_report():
-    msg = "Test coverage report for signalfx-agent"
+def print_report(msg_options=tuple()):
+    msg = "INFO Test coverage report for signalfx-agent"
     for k in REPORT_DATA.keys():
-        msg += REPORT_DATA[k]['msg']
-        msg += tabulate(REPORT_DATA[k]['report'], headers=REPORT_DATA[k]['headers'], tablefmt="fancy_grid")
+        msg += REPORT_DATA[k]['msg'].format(msg_options)
+        msg += tabulate(
+            REPORT_DATA[k]['report'], 
+            headers=REPORT_DATA[k]['headers'], 
+            tablefmt=REPORT_DATA[k].get('tablefmt', 'fancy_grid')
+        )
     print(msg)
 
-def generate_report(types, tests):
+def generate_report(types, tests, packages):
     global REPORT_DATA
     diff_mon = list(
         set([x.replace('_', '-') for x in types['monitors']])
@@ -183,7 +197,23 @@ def generate_report(types, tests):
     max_value = max([len(v) for v in misc_tests.values()])
     for i in range(max_value):
         REPORT_DATA['miscellaneous']['report'].append([ misc_tests[k].get(i, '') for k in MISC_FEATURES ])
-    print_report()
+    tmp_pkgs = ''
+    for pkg in packages:
+        if pkg in tests.keys():
+            tmp_pkgs += "{}, ".format(pkg)
+            for k, v in tests[pkg].items():
+                c = 0
+                for k_k, v_v in v.items():
+                    if c == 0:
+                        r_data = [ pkg, k, k_k, '\n'.join(v_v) ]
+                    else:
+                        r_data = [ None, None, k_k, '\n'.join(v_v) ]
+                    REPORT_DATA['functions']['report'].append(r_data)
+                    c += 1
+        else:
+            print('ERROR Package {} is not exists in tests'.format(pkg))
+    tmp_pkgs = tmp_pkgs.rstrip(', ')
+    print_report(msg_options=(tmp_pkgs))
 
 def main():
     global DEBUG
@@ -192,13 +222,15 @@ def main():
     args = args_cls.parse_args()
     json_file = args.file
     tests_dir = args.tests_dir
+    packages = args.packages
+    packages = packages.split(' ') if ' ' in packages else [ packages ]
     DEBUG = args.debug
 
     data = read_validate_json(json_file)
     types = get_types(data)
     tests = fetch_process_pytests(tests_dir)
-    generate_report(types, tests)
-    print('Total time taken: %f minutes' % ((time.time()-start)/60))
+    generate_report(types, tests, packages)
+    print('INFO Total time taken: %f minutes' % ((time.time()-start)/60))
 
 if __name__ == '__main__':
     main()
