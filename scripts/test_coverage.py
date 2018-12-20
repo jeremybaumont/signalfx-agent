@@ -77,6 +77,7 @@ class ParseArgs:
                             type=self.valid_dir, required=True)
         parser.add_argument('-p', '--packages', 
                             help='Option to list funtions across listed packages here, such as {}.\
+                             Use spaces between packages in case you wish to use multiple packages. \
                              Default package is basic.'.format(PACKAGES),
                             type=str, required=False, default='basic')
         parser.add_argument('-d', '--debug', help='Debug mode',
