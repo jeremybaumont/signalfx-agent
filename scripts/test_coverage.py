@@ -76,7 +76,8 @@ class ParseArgs:
         parser.add_argument('-t', '--tests-dir', help='signalfx-agent pytest testcases directory',
                             type=self.valid_dir, required=True)
         parser.add_argument('-p', '--packages', 
-                            help='Option to list funtions across listed packages here, such as {}'.format(PACKAGES),
+                            help='Option to list funtions across listed packages here, such as {}.\
+                             Default package is basic.'.format(PACKAGES),
                             type=str, required=False, default='basic')
         parser.add_argument('-d', '--debug', help='Debug mode',
                             type=bool, required=False, default=DEBUG)
