@@ -37,7 +37,6 @@ REPORT_DATA = {
         'headers' : [ 'Package', 'Test', 'Funtions', 'Markers' ],
         'msg' : LS + 'Available funtions in packages {}:' + LS,
         'report' : [],
-        'tablefmt' : 'psql'
     }
 }
 substitutes = { '_' : '-', '-collectd' : '',  'collectd-' : '', 'prometheus' : 'prometheus-exporter' }
@@ -86,7 +85,7 @@ class ParseArgs:
 
 def read_validate_json(file):
     print("INFO Processing self describe data")
-    with open(file) as f:
+    with open(file, encoding='utf-8') as f:
         data = json.load(f)
     if type(data) == dict:
         status = reduce(
@@ -176,9 +175,9 @@ def print_report(msg_options=tuple()):
         msg += tabulate(
             REPORT_DATA[k]['report'], 
             headers=REPORT_DATA[k]['headers'], 
-            tablefmt=REPORT_DATA[k].get('tablefmt', 'fancy_grid')
+            tablefmt=REPORT_DATA[k].get('tablefmt', 'psql')
         )
-    print(msg)
+    print(msg.encode('ascii', 'ignore').decode('ascii'))
 
 def generate_report(types, tests, packages):
     global REPORT_DATA
